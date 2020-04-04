@@ -223,9 +223,9 @@ fork(void)
 
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
-// until its parent calls wait() to find out it exited.
+// until its parent calls wait(null) to find out it exited.
 void
-exit(void)
+exit(int status)
 {
   struct proc *curproc = myproc();
   struct proc *p;
@@ -249,13 +249,14 @@ exit(void)
 
   acquire(&ptable.lock);
 
-  // Parent might be sleeping in wait().
+  // Parent might be sleeping in wait(null).
   wakeup1(curproc->parent);
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->parent == curproc){
       p->parent = initproc;
+      p->exitStatus = status;
       if(p->state == ZOMBIE)
         wakeup1(initproc);
     }
@@ -263,6 +264,8 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
+  curproc->exitStatus = status;
+  
   sched();
   panic("zombie exit");
 }
@@ -270,13 +273,14 @@ exit(void)
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int
-wait(void)
+wait(int *status)
 {
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
   
   acquire(&ptable.lock);
+  //*status = curproc->exitStatus;
   for(;;){
     // Scan through table looking for exited children.
     havekids = 0;
@@ -295,6 +299,10 @@ wait(void)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+        
+        if (status != null){
+          *status = p->exitStatus;
+        } 
         release(&ptable.lock);
         return pid;
       }
