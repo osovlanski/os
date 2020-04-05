@@ -10,6 +10,8 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
+int sched_type;
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);

@@ -82,6 +82,7 @@ argstr(int n, char **pp)
   return fetchstr(addr, pp);
 }
 
+extern int sys_set_cfs_priority(void);
 extern int sys_chdir(void);
 extern int sys_close(void);
 extern int sys_dup(void);
@@ -104,8 +105,11 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_memsize(void);
+extern int sys_policy(void);
+extern int sys_set_ps_priority(void);
 
 static int (*syscalls[])(void) = {
+[SYS_set_cfs_priority]		sys_set_cfs_priority,
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
 [SYS_wait]    sys_wait,
@@ -127,7 +131,9 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-[SYS_memsize] sys_memsize
+[SYS_memsize] sys_memsize,
+[SYS_policy] sys_policy,
+[SYS_set_ps_priority] sys_set_ps_priority
 };
 
 void

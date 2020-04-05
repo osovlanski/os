@@ -19,6 +19,13 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+static void            incAcc(struct proc*);
+//static struct proc*    findMinAccProc();
+static void            updateProcFromMinProc(struct proc*);
+//static int             numOfRunnableProc();
+static struct proc*    getNextProc();
+static int getRTR(struct proc*);
+
 
 void
 pinit(void)
@@ -147,9 +154,9 @@ userinit(void)
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
-
-  p->state = RUNNABLE;
-
+  
+  p->state = RUNNABLE; //TODO maybe change p accumulator here
+  
   release(&ptable.lock);
 }
 
@@ -213,8 +220,12 @@ fork(void)
   pid = np->pid;
 
   acquire(&ptable.lock);
-
+  
+  //if (sched_type == 1){
+  np->perf.ps_priority = 5;
+  updateProcFromMinProc(np);
   np->state = RUNNABLE;
+  
 
   release(&ptable.lock);
 
@@ -340,24 +351,30 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
+    
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+    // Switch to chosen process.  It is the process's job
+    // to release ptable.lock and then reacquire it
+    // before jumping back to us.
+    p = getNextProc();
+    if(p == null){
+      release(&ptable.lock);
+      continue;
     }
+    
+    c->proc = p;
+    switchuvm(p);
+    p->perf.retime += ticks-p->perf.retime;
+    p->state = RUNNING;
+
+    swtch(&(c->scheduler), p->context);
+    switchkvm();
+
+    // Process is done running for now.
+    incAcc(p);
+    // It should have changed its p->state before coming back.
+    c->proc = 0;
+    
     release(&ptable.lock);
 
   }
@@ -389,12 +406,17 @@ sched(void)
   mycpu()->intena = intena;
 }
 
+
 // Give up the CPU for one scheduling round.
 void
 yield(void)
 {
+  struct proc* p = myproc();
+  
   acquire(&ptable.lock);  //DOC: yieldlock
-  myproc()->state = RUNNABLE;
+  p->state = RUNNABLE;
+  incAcc(p);
+  
   sched();
   release(&ptable.lock);
 }
@@ -444,6 +466,7 @@ sleep(void *chan, struct spinlock *lk)
     release(lk);
   }
   // Go to sleep.
+  p->perf.rtime = *((uint*)(chan))-p->perf.rtime;
   p->chan = chan;
   p->state = SLEEPING;
 
@@ -467,9 +490,14 @@ wakeup1(void *chan)
 {
   struct proc *p;
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == SLEEPING && p->chan == chan){
+      p->perf.stime += *((uint*)(chan))-p->perf.stime;
       p->state = RUNNABLE;
+      updateProcFromMinProc(p);
+    }
+  }
+
 }
 
 // Wake up all processes sleeping on chan.
@@ -494,8 +522,11 @@ kill(int pid)
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
+      if(p->state == SLEEPING){
+        p->perf.stime += ticks-p->perf.stime;
         p->state = RUNNABLE;
+        updateProcFromMinProc(p);
+      }
       release(&ptable.lock);
       return 0;
     }
@@ -539,4 +570,119 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+void incAcc(struct proc* p){
+  // if(p == null || p->perf == null){
+  //   return;
+  // }
+
+  p->accumulator+=p->perf.ps_priority;
+}
+
+// struct proc* findMinAccProc(){
+
+//   struct proc *minAccProc = null;
+//   struct proc *p1 = null;
+
+//   for(p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++){
+//     if((p1->state == RUNNABLE))
+//         if (minAccProc->accumulator > p1->accumulator)
+//                 minAccProc = p1;
+//   }
+
+//   return minAccProc;
+// }
+
+// int numOfRunnableProc(){
+//   int counter =0; 
+//   struct proc *p1 = null;
+
+//   for(p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++){
+//     if((p1->state == RUNNABLE)){
+//       ++counter;
+//     }
+//   }
+   
+//   return counter; 
+// }
+
+static void updateProcFromMinProc(struct proc* curr){
+    struct proc* p=null;
+    struct proc* minAccProc=null;
+    int counter=0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE || p->state == RUNNING){
+        counter++;
+        if (minAccProc == null || minAccProc->accumulator > p->accumulator)
+            minAccProc = p;
+      }
+    }
+
+    if (counter == 1){
+      curr->accumulator = 0;
+    }else{
+      curr->accumulator = minAccProc->accumulator;
+    }
+    
+}
+
+
+
+struct proc* getNextProc(){
+  struct proc *p = null;
+  struct proc *minAccProc = null;
+  struct proc *minRTRproc = null;  //minimum Run Time Ratio
+  int counter = 0;
+
+  switch (sched_type)
+  {
+  case 0:
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE)
+          return p;
+      
+    }
+    return null;
+    //break;
+
+  case 1:
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if((p->state == RUNNABLE)){
+        counter++;
+        if (minAccProc == null || minAccProc->accumulator > p->accumulator)
+            minAccProc = p;
+      }
+    }
+
+    return minAccProc;
+   
+  case 2:
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE) {
+       if(minRTRproc == null || getRTR(minRTRproc) > getRTR(p)) {
+         minRTRproc = p;
+       }
+      }
+    }
+    return minRTRproc;
+
+  default:
+    return null;
+  }
+
+  return null;
+}
+
+
+
+/*  rtime × decay factor/rtime+wtime
+  */
+
+
+static int getRTR(struct proc* p){
+  int wtime = (p->perf.stime) + (p->perf.retime);
+  int RTR = (p->perf.rtime)*(p->cfs_priority)/(p->perf.rtime + wtime);
+
+  return RTR;
 }

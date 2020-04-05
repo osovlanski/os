@@ -2,6 +2,7 @@ struct stat;
 struct rtcdate;
 
 // system calls
+int set_cfs_priority(int priority);
 int fork(void);
 void exit(int status) __attribute__((noreturn));
 int wait(int *status);
@@ -24,6 +25,8 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 int memsize(void);
+int policy(int);
+int set_ps_priority(int);
 
 // ulib.c
 int stat(const char*, struct stat*);
