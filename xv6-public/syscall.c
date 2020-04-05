@@ -83,6 +83,7 @@ argstr(int n, char **pp)
 }
 
 extern int sys_set_cfs_priority(void);
+extern int sys_proc_info(void);
 extern int sys_chdir(void);
 extern int sys_close(void);
 extern int sys_dup(void);
@@ -109,6 +110,7 @@ extern int sys_policy(void);
 extern int sys_set_ps_priority(void);
 
 static int (*syscalls[])(void) = {
+[SYS_proc_info]		sys_proc_info,
 [SYS_set_cfs_priority]		sys_set_cfs_priority,
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,

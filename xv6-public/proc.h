@@ -1,3 +1,5 @@
+#include "perf.h"
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -34,12 +36,12 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
-struct perf {
-  int ps_priority;
-  int stime;
-  int retime;
-  int rtime;
-};
+// struct perf {
+//   int ps_priority;
+//   int stime;
+//   int retime;
+//   int rtime;
+// };
 
 // Per-process state
 struct proc {

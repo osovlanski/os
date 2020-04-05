@@ -164,3 +164,18 @@ sys_set_cfs_priority(void)
   return 1;
 
 }
+
+int
+sys_proc_info(void)
+{
+
+  int adr;
+
+  if(argint(0, &adr) < 0)
+    return -1;
+
+  struct perf* p = (void *)adr;
+  *p = myproc()->perf ;
+  
+  return 0;
+}
