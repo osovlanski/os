@@ -127,9 +127,8 @@ sys_set_ps_priority(void){
   if(argint(0, &priority) < 0)
     return -1;
 
-  if (sched_type == 1){
-    myproc()->perf.ps_priority = priority;
-  }
+  myproc()->perf.ps_priority = priority;
+  
   return priority;
 }
 

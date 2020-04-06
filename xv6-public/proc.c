@@ -25,7 +25,6 @@ static void            updateProcFromMinProc(struct proc*);
 //static int             numOfRunnableProc();
 static struct proc*    getNextProc();
 static int getRTR(struct proc*);
-static void updateCFSPriority(struct proc* p);
 
 
 void
@@ -224,6 +223,9 @@ fork(void)
   
   //if (sched_type == 1){
   np->perf.ps_priority = 5;
+  np->perf.retime=0;
+  np->perf.rtime=0;
+  np->perf.stime=0;
   updateProcFromMinProc(np);
   np->state = RUNNABLE;
   
@@ -311,6 +313,10 @@ wait(int *status)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+        p->perf.retime = 0;
+        p->perf.rtime = 0;
+        p->perf.stime = 0;
+        p->perf.ps_priority = 0;
         
         if (status != null){
           *status = p->exitStatus;
@@ -366,6 +372,7 @@ scheduler(void)
     c->proc = p;
     switchuvm(p);
     p->state = RUNNING;
+    //p->perf.rtime++;
 
     swtch(&(c->scheduler), p->context);
     switchkvm();
@@ -490,7 +497,6 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    updateCFSPriority(p);
     if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
       updateProcFromMinProc(p);
@@ -685,9 +691,13 @@ static int getRTR(struct proc* p){
   return RTR;
 }
 
-static void updateCFSPriority(struct proc* p){
+void updateCFSPriority(){  
+  struct proc *p;
+  acquire(&ptable.lock);  
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->state == RUNNING) p->perf.rtime++;
     if (p->state == SLEEPING) p->perf.stime++;
     if (p->state == RUNNABLE) p->perf.retime++;
-    if (p->state == RUNNING) p->perf.rtime++;
-
+  }
+  release(&ptable.lock);
 }
