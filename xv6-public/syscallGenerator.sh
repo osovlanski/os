@@ -1,13 +1,6 @@
 #!/bin/bash
 clear
 
-# kaki="$@"
-
-# for k in "${@:2}"; do
-#     echo $k 
-# done
-echo $2
-
 if [ "$#" -lt 3 ]; then
     echo 'Error: need insert at least 3 aregument'
     exit 1
@@ -52,7 +45,7 @@ echo "" >> sysproc.c
 echo "int" >> sysproc.c
 echo "sys_$2(void)" >> sysproc.c
 echo "{" >> sysproc.c
-echo " return 0;" >> sysproc.c
+echo "  return 0;" >> sysproc.c
 echo "}" >> sysproc.c
 
 echo 'sysproc.c updating is done'
@@ -74,9 +67,12 @@ echo '-------------------------------------------------------------------------'
 echo '-------------------------------------------------------------------------'
 echo '5. user.h'
 
+set -f
 func=$1' '$2'('${@:3}');'
+set +f
 old='int fork(void);'
 sed -i "s/${old}/${func}\n${old}/" user.h 
+
 
 echo 'user.h updating is done'
 echo '-------------------------------------------------------------------------'

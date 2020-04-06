@@ -174,7 +174,7 @@ sys_proc_info(void)
   if(argint(0, &adr) < 0)
     return -1;
 
-  struct perf* p = (void *)adr;
+  struct perf* p = (struct perf *)adr;
   *p = myproc()->perf ;
   
   return 0;
