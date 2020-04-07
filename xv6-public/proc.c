@@ -221,8 +221,8 @@ fork(void)
 
   acquire(&ptable.lock);
   
-  //if (sched_type == 1){
-  np->perf.ps_priority = 5;
+  np->perf.ps_priority = 5; 
+  np->cfs_priority = curproc->cfs_priority;
   np->perf.retime=0;
   np->perf.rtime=0;
   np->perf.stime=0;
@@ -377,8 +377,8 @@ scheduler(void)
     swtch(&(c->scheduler), p->context);
     switchkvm();
 
-    // Process is done running for now.
     incAcc(p);
+    // Process is done running for now.
     // It should have changed its p->state before coming back.
     c->proc = 0;
     
@@ -584,33 +584,6 @@ void incAcc(struct proc* p){
   p->accumulator+=p->perf.ps_priority;
 }
 
-// struct proc* findMinAccProc(){
-
-//   struct proc *minAccProc = null;
-//   struct proc *p1 = null;
-
-//   for(p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++){
-//     if((p1->state == RUNNABLE))
-//         if (minAccProc->accumulator > p1->accumulator)
-//                 minAccProc = p1;
-//   }
-
-//   return minAccProc;
-// }
-
-// int numOfRunnableProc(){
-//   int counter =0; 
-//   struct proc *p1 = null;
-
-//   for(p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++){
-//     if((p1->state == RUNNABLE)){
-//       ++counter;
-//     }
-//   }
-   
-//   return counter; 
-// }
-
 static void updateProcFromMinProc(struct proc* curr){
     struct proc* p=null;
     struct proc* minAccProc=null;
@@ -696,8 +669,9 @@ void updateCFSPriority(){
   acquire(&ptable.lock);  
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if (p->state == RUNNING) p->perf.rtime++;
-    if (p->state == SLEEPING) p->perf.stime++;
     if (p->state == RUNNABLE) p->perf.retime++;
+    if (p->state == SLEEPING) p->perf.stime++;
+    
   }
   release(&ptable.lock);
 }
