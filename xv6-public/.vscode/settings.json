@@ -2,6 +2,12 @@
     "files.associations": {
         "random": "cpp",
         "user.h": "c",
-        "limits": "c"
+        "limits": "c",
+        "spinlock.h": "c",
+        "proc.h": "c",
+        "stats.h": "c",
+        "defs.h": "c",
+        "memlayout.h": "c",
+        "types.h": "c"
     }
 }
