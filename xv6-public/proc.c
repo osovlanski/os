@@ -24,7 +24,7 @@ static void            incAcc(struct proc*);
 static void            updateProcFromMinProc(struct proc*);
 //static int             numOfRunnableProc();
 static struct proc*    getNextProc();
-static int getRTR(struct proc*);
+static double getRTR(struct proc*);
 
 
 void
@@ -156,7 +156,7 @@ userinit(void)
   acquire(&ptable.lock);
   
   p->state = RUNNABLE; //TODO maybe change p accumulator here
-  
+
   release(&ptable.lock);
 }
 
@@ -656,13 +656,13 @@ struct proc* getNextProc(){
 /*  rtime × decay factor/rtime+wtime
   */
 
-
-static int getRTR(struct proc* p){
+static double getRTR(struct proc* p){
   int wtime = (p->perf.stime) + (p->perf.retime);
-  int RTR = (p->perf.rtime)*(p->cfs_priority)/(p->perf.rtime + wtime);
-
+  double RTR = (p->perf.rtime)*(p->cfs_priority)/(p->perf.rtime + wtime);
   return RTR;
 }
+
+
 
 void updateCFSPriority(){  
   struct proc *p;

@@ -15,16 +15,16 @@ void procTester(int priority,int cfs_priority,long long i){
         exit(1);
     }
 
-    // for(double j = 0.01;j < i; j+=0.01){
-    //     double x =  x + 3.14 * 89.64;    
-    // }
+    for(double j = 0;j < i; j+=0.01){
+        double x =  x + 3.14 * 89.64;    
+    }
 
-    int dummy = 0;
-    while(i--){
-        dummy+=i;
-    }  
+    // int dummy = 0;
+    // while(i--){
+    //     dummy+=i;
+    // }  
    
-    sleep(1);
+    //sleep(1);
 
     if(proc_info(&performance) < 0) {
         exit(1);
@@ -42,7 +42,7 @@ int main (int argc, char **argv){
     int processNum=3;
     int priorityArr[] = {10,5,1};
     int cfs_priorityArr[] = {3,2,1};
-    long long iArr[] = {1000000,1000000,1000000};
+    long long iArr[] = {10000,10000,10000};
 
     printf(1,"PID\tPS_PRIORITY\tSTIME\tRETIME\tRTIME\n");
 
